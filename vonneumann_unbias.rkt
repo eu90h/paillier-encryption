@@ -1,5 +1,5 @@
 #lang racket
-(provide random-int)
+(provide unbias bit-list->number random-int)
 ; An implementation of the von Neumann unbiasing algorithm.
 ; The unbias procedure takes a pseudo-random bit generator and extracts entropy from the sequence of generated bits
 ; thereby creating a "more random" sequence.
