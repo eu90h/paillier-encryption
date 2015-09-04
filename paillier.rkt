@@ -11,7 +11,7 @@
 (require math)
 
 (struct paillier-public-key (n g))
-(struct paillier-private-key (n g p q phi))
+(struct paillier-private-key (n g p q lambda))
 (struct paillier-ct (byte))
 
 (define (random-prime-num bits)
@@ -63,9 +63,9 @@
   (let* ([n (paillier-private-key-n private-key)]
          [n-sqrd (sqr n)]
          [g (paillier-private-key-g private-key)]
-         [phi (paillier-private-key-phi private-key)]
-         [mu (modular-inverse (L (modular-expt g phi (sqr n)) n) n)]
-         [u (modular-expt (paillier-ct-byte ct) phi n-sqrd)])
+         [lambda (paillier-private-key-lambda private-key)]
+         [mu (modular-inverse (L (modular-expt g lambda (sqr n)) n) n)]
+         [u (modular-expt (paillier-ct-byte ct) lambda n-sqrd)])
     (with-modulus n (mod* (L u n) mu))))
 
 (define (paillier-decrypt-bytes b private)
