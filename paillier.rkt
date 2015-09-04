@@ -14,6 +14,7 @@
 (struct paillier-private-key (n g p q lambda))
 (struct paillier-ct (byte))
 
+; this needs improvement
 (define (random-prime-num bits)
   (let loop ([p (random-bits bits)])
     (if (prime? p)
@@ -28,9 +29,10 @@
 (define (choose-base n)
   (random-integer 1 (sqr n)))
 
+(define prime-bits 512)
 (define (paillier-generate-keys)
-  (let* ([p (random-prime-num 512)]
-         [q (random-prime-num 512)]
+  (let* ([p (random-prime-num prime-bits)]
+         [q (random-prime-num prime-bits)]
          [n (* p q)]
          [g (choose-base n)]
          [l (lcm (sub1 p) (sub1 q))])
@@ -49,7 +51,6 @@
                          (modular-expt r n n-sqrd))))))
 
 (define (paillier-encrypt-bytes b public)
-  
   (map (lambda (a-byte) (paillier-encrypt-byte a-byte public))
        (bytes->list b)))
 
