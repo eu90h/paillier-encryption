@@ -8,22 +8,20 @@
          paillier-decrypt-bytes
          paillier-decrypt-string
          paillier-encrypt-string)
-(require math "vonneumann_unbias.rkt")
+(require math)
 
 (struct paillier-public-key (n g))
 (struct paillier-private-key (n g p q phi))
 (struct paillier-ct (byte))
 
-(define rand-int ((curry random-int) (thunk (random-integer 0 2))))
-
 (define (random-prime-num bits)
-  (let loop ([p (rand-int bits)])
+  (let loop ([p (random-bits bits)])
     (if (prime? p)
         p
-        (loop (rand-int bits)))))
+        (loop (random-bits bits)))))
 
 ; While the original specification uses a different, more complex method of choosing bases,
-; the paper at https://www.cdc.informatik.tu-darmstadt.de/reports/TR/TI-02-04.pdf claims that
+; the paper at https://www.cdc.informatik.tu-darmstadt.de/reports/TR/TI-02-04.pdf claims that:
 ;   The probability that a random element satisfies the key
 ;   condition is 1 - 1/n, and it is an overwhelming probability in the bit-length of the
 ;   public modulus n. Therefore we can use a random g of Z_n^2 as the public key.
@@ -50,9 +48,13 @@
                    (mod* (modular-expt g byte n-sqrd)
                          (modular-expt r n n-sqrd))))))
 
+(define (paillier-encrypt-bytes b public)
+  
+  (map (lambda (a-byte) (paillier-encrypt-byte a-byte public))
+       (bytes->list b)))
+
 (define (paillier-encrypt-string s public)
-  (map (lambda (x) (paillier-encrypt-byte x public))
-       (bytes->list (string->bytes/utf-8 s))))
+  (paillier-encrypt-bytes (string->bytes/utf-8 s) public))
 
 (define (L x n)
   (/ (- x 1) n))
@@ -67,11 +69,11 @@
     (with-modulus n (mod* (L u n) mu))))
 
 (define (paillier-decrypt-bytes b private)
-  (map (lambda (x) (paillier-decrypt-byte x private))
-       b))
+  (list->bytes (map (lambda (a-byte) (paillier-decrypt-byte a-byte private))
+                    b)))
 
 (define (paillier-decrypt-string b private)
-  (bytes->string/utf-8 (list->bytes (paillier-decrypt-bytes b private))))
+  (bytes->string/utf-8 (paillier-decrypt-bytes b private)))
 
 (module+ test
   (require rackunit)
