@@ -12,3 +12,7 @@ Usage
 * Generate your public-private key pair: `(define-values (public private) (paillier-generate-keys))`
 * Encryption: `(define ct (paillier-encrypt-string "hello, dr. pascal paillier!" public))`
 * Decryption: `(paillier-decrypt-string ct private)`
+
+TODO
+====
+http://www.brics.dk/RS/00/45/BRICS-RS-00-45.pdf
