@@ -38,6 +38,7 @@
     (collect-garbage)
     (values pub priv)))
 
+;the optional argument is inelegant, but collecting garbage after every byte is SLOW, so we need a way to turn it off
 (define (paillier-encrypt-byte byte public-key [collect-garbage? #t])
   (let ([ct (paillier-ct
    (let* ([g (paillier-public-key-g public-key)]
@@ -54,8 +55,10 @@
 
 
 (define (paillier-encrypt-bytes b public)
-  (map (lambda (a-byte) (paillier-encrypt-byte a-byte public #f))
-       (bytes->list b)))
+  (let ([ct-bytes (map (lambda (a-byte) (paillier-encrypt-byte a-byte public #f))
+                       (bytes->list b))])
+    (collect-garbage)
+    ct-bytes))
 
 (define (paillier-encrypt-string s public)
   (paillier-encrypt-bytes (string->bytes/utf-8 s) public))
@@ -63,18 +66,24 @@
 (define (L x n)
   (/ (- x 1) n))
 
-(define (paillier-decrypt-byte ct private-key)
+; yes the optional argument stinks -- see the comment for paillier-encrypt-byte
+(define (paillier-decrypt-byte ct private-key [collect-garbage? #t])
   (let* ([n (paillier-private-key-n private-key)]
          [n-sqrd (sqr n)]
          [g (paillier-private-key-g private-key)]
          [lambda (paillier-private-key-lambda private-key)]
          [mu (modular-inverse (L (modular-expt g lambda (sqr n)) n) n)]
-         [u (modular-expt (paillier-ct-byte ct) lambda n-sqrd)])
-    (with-modulus n (mod* (L u n) mu))))
+         [u (modular-expt (paillier-ct-byte ct) lambda n-sqrd)]
+         [pt (with-modulus n (mod* (L u n) mu))])
+    (when collect-garbage?
+      (collect-garbage))
+    pt))
 
 (define (paillier-decrypt-bytes b private)
-  (list->bytes (map (lambda (a-byte) (paillier-decrypt-byte a-byte private))
-                    b)))
+  (let ([pt-bytes (list->bytes (map (lambda (a-byte) (paillier-decrypt-byte a-byte private #f))
+                                    b))])
+    (collect-garbage)
+    pt-bytes))
 
 (define (paillier-decrypt-string b private)
   (bytes->string/utf-8 (paillier-decrypt-bytes b private)))
