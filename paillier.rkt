@@ -14,12 +14,8 @@
 (struct paillier-private-key (n g p q lambda))
 (struct paillier-ct (byte))
 
-; this needs improvement
 (define (random-prime-num bits)
-  (let loop ([p (random-bits bits)])
-    (if (prime? p)
-        p
-        (loop (random-bits bits)))))
+  (random-prime (expt 2 bits)))
 
 ; While the original specification uses a different, more complex method of choosing bases,
 ; the paper at https://www.cdc.informatik.tu-darmstadt.de/reports/TR/TI-02-04.pdf claims that:
@@ -35,23 +31,30 @@
          [q (random-prime-num prime-bits)]
          [n (* p q)]
          [g (choose-base n)]
-         [l (lcm (sub1 p) (sub1 q))])
-    (values
-     (paillier-public-key n g)
-     (paillier-private-key n g p q (lcm (sub1 p) (sub1 q))))))
+         [l (lcm (sub1 p) (sub1 q))]
+         [pub (paillier-public-key n g)]
+         [priv (paillier-private-key n g p q (lcm (sub1 p) (sub1 q)))])
+    ;the idea here is to remove any sensitive data from memory if we don't need it anymore
+    (collect-garbage)
+    (values pub priv)))
 
-(define (paillier-encrypt-byte byte public-key)
-  (paillier-ct
+(define (paillier-encrypt-byte byte public-key [collect-garbage? #t])
+  (let ([ct (paillier-ct
    (let* ([g (paillier-public-key-g public-key)]
           [n (paillier-public-key-n public-key)]
           [n-sqrd (sqr n)]
           [r (random-integer 0 n)])
      (with-modulus n-sqrd
                    (mod* (modular-expt g byte n-sqrd)
-                         (modular-expt r n n-sqrd))))))
+                         (modular-expt r n n-sqrd)))))])
+    ;the idea here is to remove any sensitive data from memory if we don't need it anymore
+    (when collect-garbage?
+      (collect-garbage))
+    ct))
+
 
 (define (paillier-encrypt-bytes b public)
-  (map (lambda (a-byte) (paillier-encrypt-byte a-byte public))
+  (map (lambda (a-byte) (paillier-encrypt-byte a-byte public #f))
        (bytes->list b)))
 
 (define (paillier-encrypt-string s public)
